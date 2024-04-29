@@ -18,9 +18,14 @@ let mesh: THREE.Mesh;
 
 // let decalGeometry: DecalGeometry;
 
+var decalSize = new THREE.Vector3(10, 10, 10); // 尺寸可以根据你的需要调整
+
+// 假设您已经有了一个mesh，该mesh使用了MeshStandardMaterial
+const textureLoader = new THREE.TextureLoader();
+const texture = textureLoader.load("/image.png");
+
 const decalMaterial = new THREE.MeshPhongMaterial({
-  // map: texture,
-  color: 0xff0000,
+  map: texture,
   transparent: true,
   depthTest: true,
   depthWrite: false,
@@ -29,11 +34,6 @@ const decalMaterial = new THREE.MeshPhongMaterial({
   wireframe: false,
 });
 
-var decalSize = new THREE.Vector3(10, 10, 10); // 尺寸可以根据你的需要调整
-
-// 假设您已经有了一个mesh，该mesh使用了MeshStandardMaterial
-// const textureLoader = new THREE.TextureLoader();
-// const texture = textureLoader.load("/image.png");
 function init() {
   // 创建场景
   scene = new THREE.Scene();
