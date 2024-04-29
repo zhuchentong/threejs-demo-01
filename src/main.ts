@@ -25,7 +25,8 @@ const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load("/image.png");
 
 const decalMaterial = new THREE.MeshPhongMaterial({
-  map: texture,
+  // map: texture,
+  color: 0x28E430,
   transparent: true,
   depthTest: true,
   depthWrite: false,
