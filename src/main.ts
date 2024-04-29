@@ -107,8 +107,8 @@ var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 let dragging = false;
 
-const MAX_EVENTS = 10; // 触发处理的累积事件数量阈值
-const INTERVAL = 100; // 触发处理的时间间隔（毫秒）
+// const MAX_EVENTS = 10; // 触发处理的累积事件数量阈值
+// const INTERVAL = 100; // 触发处理的时间间隔（毫秒）
 
 function onMouseDown(event: MouseEvent) {
   event.preventDefault();
