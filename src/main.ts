@@ -5,10 +5,8 @@ import {
 } from "three/examples/jsm/Addons.js";
 import "./style.css";
 import * as THREE from "three";
-import ThreeWorker from "./worker.ts?worker";
 
-const worker = new ThreeWorker();
-const cache: { decalPosition: THREE.Vector3; euler: THREE.Euler }[] = [];
+// const cache: { decalPosition: THREE.Vector3; euler: THREE.Euler }[] = [];
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -18,7 +16,7 @@ let controls: OrbitControls;
 let light: THREE.AmbientLight;
 let mesh: THREE.Mesh;
 
-let decalGeometry: DecalGeometry;
+// let decalGeometry: DecalGeometry;
 
 const decalMaterial = new THREE.MeshPhongMaterial({
   // map: texture,
