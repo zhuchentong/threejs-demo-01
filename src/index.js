@@ -323,6 +323,9 @@ function render() {
   if (params.rotate) {
     const delta = currTime - lastTime;
     targetMesh.rotation.y += delta * 0.001;
+		if(cloneMesh){
+			cloneMesh.rotation.y += delta * 0.001;
+		}
   }
 
   lastTime = currTime;
