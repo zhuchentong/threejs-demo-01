@@ -14,6 +14,8 @@
     "vite": "^5.0.8"
   },
   "dependencies": {
-    "three": "^0.164.1"
+    "stats-js": "^1.0.1",
+    "three": "^0.164.1",
+    "three-mesh-bvh": "^0.7.4"
   }
 }
