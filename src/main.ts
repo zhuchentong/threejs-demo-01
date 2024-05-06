@@ -5,6 +5,7 @@ import {
 } from "three/examples/jsm/Addons.js";
 import "./style.css";
 import * as THREE from "three";
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // const cache: { decalPosition: THREE.Vector3; euler: THREE.Euler }[] = [];
 
@@ -15,10 +16,12 @@ let loader: THREE.Loader;
 let controls: OrbitControls;
 let light: THREE.AmbientLight;
 let mesh: THREE.Mesh;
-
+let cloneMesh :THREE.Mesh
+let decalMesh :THREE.Mesh
+let meshList:THREE.BufferGeometry[] = []
 // let decalGeometry: DecalGeometry;
 
-var decalSize = new THREE.Vector3(10, 10, 10); // 尺寸可以根据你的需要调整
+var decalSize = new THREE.Vector3(40, 40, 5); // 尺寸可以根据你的需要调整
 
 // 假设您已经有了一个mesh，该mesh使用了MeshStandardMaterial
 const textureLoader = new THREE.TextureLoader();
@@ -33,6 +36,18 @@ const decalMaterial = new THREE.MeshPhongMaterial({
   polygonOffset: true,
   polygonOffsetFactor: -4,
   wireframe: false,
+});
+
+
+
+const cloneMaterial = new THREE.MeshPhongMaterial({
+  color: 0x156289, // 基础颜色
+  emissive: 0x072534, // 自发颜色
+  side: THREE.DoubleSide, // 材质的两面都可见
+  flatShading: true, // 平面着色
+  shininess: 100, // 高光强度，数值越大越明显
+  specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
+  wireframe: true,
 });
 
 function init() {
@@ -194,9 +209,19 @@ function onMouseOver(event: MouseEvent) {
       euler,
       decalSize
     );
+    meshList.push(decalGeometry)
 
-    var decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-    scene.add(decalMesh);
+    if(decalMesh){
+      scene.remove(decalMesh)
+    }
+    const temp = BufferGeometryUtils.mergeGeometries(meshList)
+    const geometry = BufferGeometryUtils.mergeVertices(temp,0)
+  
+    decalMesh = new THREE.Mesh(geometry,decalMaterial)
+    scene.add(decalMesh)
+
+    // decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
+    // scene.add(decalMesh);
 
     // cache.push({
     //   decalPosition,
@@ -245,3 +270,26 @@ animate();
 // };
 
 // requestIdleCallback(createDecalGeometry);
+
+
+
+const button = document.getElementById("generate");
+
+if(button){
+  button.addEventListener("click", () => {
+    generateMesh()
+  });
+}
+
+function generateMesh(){
+  if(cloneMesh){
+    scene.remove(cloneMesh)
+  }
+  const temp = BufferGeometryUtils.mergeGeometries(meshList)
+  const geometry = BufferGeometryUtils.mergeVertices(temp,20)
+
+  cloneMesh = new THREE.Mesh(geometry,cloneMaterial)
+  cloneMesh.translateX(-500)
+  scene.add(cloneMesh)
+  
+}
