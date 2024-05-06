@@ -34,7 +34,7 @@ const cloneMaterial = new THREE.MeshPhongMaterial({
   flatShading: true, // 平面着色
   shininess: 100, // 高光强度，数值越大越明显
   specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
-  wireframe: false,
+  wireframe: true,
 });
 
 
@@ -436,14 +436,14 @@ function generateMesh(){
     
     const edgeGeometry = new THREE.EdgesGeometry(geometry);
 
-    edgeMesh1 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
-    edgeMesh1.rotation.y = targetMesh.rotation.y
-    edgeMesh2 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
-    edgeMesh2.rotation.y = targetMesh.rotation.y
+    // edgeMesh1 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    // edgeMesh1.rotation.y = targetMesh.rotation.y
+    // edgeMesh2 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    // edgeMesh2.rotation.y = targetMesh.rotation.y
 
     cloneMesh2.translateX(1000)
-    edgeMesh2.translateX(1000)
-    scene.add(cloneMesh1,cloneMesh2,edgeMesh1,edgeMesh2);
+    // edgeMesh2.translateX(1000)
+    scene.add(cloneMesh1,cloneMesh2);
   }
 }
 
