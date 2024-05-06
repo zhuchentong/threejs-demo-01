@@ -19,11 +19,15 @@ THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 const params = {
   size: 30,
   rotate: true,
+  frame: true
 };
 
 let stats;
 let scene, camera, renderer, controls;
-let targetMesh, brushMesh, cloneMesh, edgeMesh;
+let targetMesh, brushMesh, cloneMesh1, edgeMesh1, cloneMesh2, edgeMesh2;
+
+
+
 let mouse = new THREE.Vector2();
 let mouseType = -1,
   brushActive = false;
@@ -127,7 +131,7 @@ function init() {
     0.1,
     50
   );
-  camera.position.set(0, 1000, 1000);
+  camera.position.set(500, 1000, 1000);
   camera.far = 10000;
   camera.updateProjectionMatrix();
 
@@ -138,6 +142,7 @@ function init() {
   const gui = new dat.GUI();
   gui.add(params, "size").min(1).max(100).step(1);
   gui.add(params, "rotate");
+  gui.add(params,'frame')
   gui.open();
 
   window.addEventListener(
@@ -314,7 +319,9 @@ function render() {
         colorAttr.needsUpdate = true;
       }
 
-      generateMesh()
+      if(params.frame){
+        generateMesh()
+      }
     } else {
       controls.enabled = true;
       brushMesh.visible = false;
@@ -325,11 +332,17 @@ function render() {
   if (params.rotate) {
     const delta = currTime - lastTime;
     targetMesh.rotation.y += delta * 0.001;
-		if(cloneMesh){
-			cloneMesh.rotation.y += delta * 0.001;
+		if(cloneMesh1){
+			cloneMesh1.rotation.y += delta * 0.001;
 		}
-    if(edgeMesh){
-      edgeMesh.rotation.y += delta * 0.001;
+    if(cloneMesh2){
+			cloneMesh2.rotation.y += delta * 0.001;
+		}
+    if(edgeMesh1){
+			edgeMesh1.rotation.y += delta * 0.001;
+		}
+    if(edgeMesh2){
+      edgeMesh2.rotation.y += delta * 0.001;
     }
   }
 
@@ -363,12 +376,20 @@ function generateMesh(){
   }
 
   if (points.length) {
-    if (cloneMesh) {
-      scene.remove(cloneMesh);
+    if (cloneMesh1) {
+      scene.remove(cloneMesh1);
     }
 
-    if(edgeMesh){
-      scene.remove(edgeMesh)
+    if(edgeMesh1){
+      scene.remove(edgeMesh1)
+    }
+
+    if (cloneMesh2) {
+      scene.remove(cloneMesh2);
+    }
+
+    if(edgeMesh2){
+      scene.remove(edgeMesh2)
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -399,20 +420,27 @@ function generateMesh(){
     });
 
     // 创建一个Mesh（网格），将geometry和material传递给它
-    cloneMesh = new THREE.Mesh(geometry, material);
-    cloneMesh.rotation.y = targetMesh.rotation.y
+    cloneMesh1 = new THREE.Mesh(geometry, material);
+    cloneMesh1.rotation.y = targetMesh.rotation.y
+    cloneMesh2 = new THREE.Mesh(geometry, material);
+    cloneMesh2.rotation.y = targetMesh.rotation.y
     
     const edgeGeometry = new THREE.EdgesGeometry(geometry);
     var edgesMaterial = new THREE.LineBasicMaterial({
       color: 0xff0000
     })
 
-    edgeMesh = new THREE.LineSegments(edgeGeometry,edgesMaterial);
-    edgeMesh.rotation.y = targetMesh.rotation.y
-    scene.add(cloneMesh);
-    scene.add(edgeMesh)
+    edgeMesh1 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    edgeMesh1.rotation.y = targetMesh.rotation.y
+    edgeMesh2 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    edgeMesh2.rotation.y = targetMesh.rotation.y
+
+    cloneMesh2.translateX(1000)
+    edgeMesh2.translateX(1000)
+    scene.add(cloneMesh1,cloneMesh2,edgeMesh1,edgeMesh2);
   }
 }
+
 
 const button = document.getElementById("generate");
 button.addEventListener("click", () => {
