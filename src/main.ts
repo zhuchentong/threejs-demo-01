@@ -189,7 +189,7 @@ function onMouseOver(event: MouseEvent) {
     var decalPosition = intersect.point;
 
     // 创建贴花
-
+    // .setRotationFromQuaternion 
     var quaternion = new THREE.Quaternion();
     quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), decalNormal);
     var euler = new THREE.Euler().setFromQuaternion(quaternion, "XYZ");
