@@ -27,6 +27,20 @@ let scene, camera, renderer, controls;
 let targetMesh, brushMesh, cloneMesh1, edgeMesh1, cloneMesh2, edgeMesh2;
 
 
+const cloneMaterial = new THREE.MeshPhongMaterial({
+  color: 0x156289, // 基础颜色
+  emissive: 0x072534, // 自发颜色
+  side: THREE.DoubleSide, // 材质的两面都可见
+  flatShading: true, // 平面着色
+  shininess: 100, // 高光强度，数值越大越明显
+  specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
+  wireframe: false,
+});
+
+
+const edgesMaterial = new THREE.LineBasicMaterial({
+  color: 0xff0000
+})
 
 let mouse = new THREE.Vector2();
 let mouseType = -1,
@@ -409,26 +423,14 @@ function generateMesh(){
     //   vertexColors: true,
     // });
 
-    let material = new THREE.MeshPhongMaterial({
-      color: 0x156289, // 基础颜色
-      emissive: 0x072534, // 自发颜色
-      side: THREE.DoubleSide, // 材质的两面都可见
-      flatShading: true, // 平面着色
-      shininess: 100, // 高光强度，数值越大越明显
-      specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
-      wireframe: false,
-    });
 
     // 创建一个Mesh（网格），将geometry和material传递给它
-    cloneMesh1 = new THREE.Mesh(geometry, material);
+    cloneMesh1 = new THREE.Mesh(geometry, cloneMaterial);
     cloneMesh1.rotation.y = targetMesh.rotation.y
-    cloneMesh2 = new THREE.Mesh(geometry, material);
+    cloneMesh2 = new THREE.Mesh(geometry, cloneMaterial);
     cloneMesh2.rotation.y = targetMesh.rotation.y
     
     const edgeGeometry = new THREE.EdgesGeometry(geometry);
-    var edgesMaterial = new THREE.LineBasicMaterial({
-      color: 0xff0000
-    })
 
     edgeMesh1 = new THREE.LineSegments(edgeGeometry,edgesMaterial);
     edgeMesh1.rotation.y = targetMesh.rotation.y
