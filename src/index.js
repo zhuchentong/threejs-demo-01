@@ -101,7 +101,6 @@ function init() {
     });
     targetMesh = new THREE.Mesh(geometry, knotMaterial);
     targetMesh.geometry.computeBoundsTree();
-    targetMesh.translateX(-500);
     scene.add(targetMesh);
     render();
   });
@@ -395,21 +394,20 @@ button.addEventListener("click", () => {
       flatShading: true, // 平面着色
       shininess: 100, // 高光强度，数值越大越明显
       specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
-      wireframe: true,
+      wireframe: false,
     });
 
     // 创建一个Mesh（网格），将geometry和material传递给它
     cloneMesh = new THREE.Mesh(geometry, material);
-    cloneMesh.translateX(500);
-
+    cloneMesh.rotation.y = targetMesh.rotation.y
     
     const edgeGeometry = new THREE.EdgesGeometry(geometry);
     var edgesMaterial = new THREE.LineBasicMaterial({
       color: 0xff0000
     })
-    edgeMesh = new THREE.LineSegments(edgeGeometry,edgesMaterial);
-    edgeMesh.translateX(500);
 
+    edgeMesh = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    edgeMesh.rotation.y = targetMesh.rotation.y
     scene.add(cloneMesh);
     scene.add(edgeMesh)
   }
