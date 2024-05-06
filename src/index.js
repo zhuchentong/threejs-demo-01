@@ -145,7 +145,7 @@ function init() {
     0.1,
     50
   );
-  camera.position.set(500, 1000, 1000);
+  camera.position.set(100, 500, 2000);
   camera.far = 10000;
   camera.updateProjectionMatrix();
 
@@ -231,6 +231,10 @@ function init() {
   });
 
   controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.x = 500;
+  controls.target.y = 0;
+  controls.target.z = 400;
+  controls.update()
 
   controls.addEventListener("start", function () {
     this.active = true;
