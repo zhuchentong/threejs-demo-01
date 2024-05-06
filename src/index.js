@@ -91,7 +91,7 @@ function init() {
 
   // 创建STL加载器并加载模型
   const loader = new STLLoader();
-  loader.load("/model.stl", function (geometry) {
+  loader.load("/test.stl", function (geometry) {
     // const material = new THREE.MeshStandardMaterial({
     //   metalness: 1.0, // 设置金属度为 1.0
     //   roughness: 0.5, // 设置粗糙度为 0.5
@@ -145,7 +145,7 @@ function init() {
     0.1,
     50
   );
-  camera.position.set(100, 500, 2000);
+  camera.position.set(10, 50, 20);
   camera.far = 10000;
   camera.updateProjectionMatrix();
 

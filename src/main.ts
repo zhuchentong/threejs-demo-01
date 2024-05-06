@@ -59,7 +59,7 @@ function init() {
   camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
-    0.1,
+    0.01,
     10000
   );
 
@@ -68,7 +68,7 @@ function init() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  camera.position.z = 1000;
+  camera.position.z = 10;
   controls = new OrbitControls(camera, renderer.domElement);
 
   light = new THREE.AmbientLight(0x404040);
@@ -86,7 +86,7 @@ function init() {
 
   // 创建STL加载器并加载模型
   loader = new STLLoader();
-  loader.load("/model.stl", function (geometry) {
+  loader.load("/test.stl", function (geometry) {
     const material = new THREE.MeshStandardMaterial({
       metalness: 1.0, // 设置金属度为 1.0
       roughness: 0.5, // 设置粗糙度为 0.5
