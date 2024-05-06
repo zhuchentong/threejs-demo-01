@@ -388,6 +388,7 @@ button.addEventListener("click", () => {
       flatShading: true, // 平面着色
       shininess: 100, // 高光强度，数值越大越明显
       specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
+      wireframe: true,
     });
 
     // 创建一个Mesh（网格），将geometry和material传递给它
