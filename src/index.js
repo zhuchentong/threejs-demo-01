@@ -97,6 +97,7 @@ function init() {
       roughness: 0.3,
       metalness: 0,
       vertexColors: true,
+      wireframe: true,
     });
     targetMesh = new THREE.Mesh(geometry, knotMaterial);
     targetMesh.geometry.computeBoundsTree();
