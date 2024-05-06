@@ -23,7 +23,7 @@ const params = {
 
 let stats;
 let scene, camera, renderer, controls;
-let targetMesh, brushMesh, cloneMesh;
+let targetMesh, brushMesh, cloneMesh, edgeMesh;
 let mouse = new THREE.Vector2();
 let mouseType = -1,
   brushActive = false;
@@ -97,7 +97,7 @@ function init() {
       roughness: 0.3,
       metalness: 0,
       vertexColors: true,
-      wireframe: true,
+      wireframe: false,
     });
     targetMesh = new THREE.Mesh(geometry, knotMaterial);
     targetMesh.geometry.computeBoundsTree();
@@ -327,6 +327,9 @@ function render() {
 		if(cloneMesh){
 			cloneMesh.rotation.y += delta * 0.001;
 		}
+    if(edgeMesh){
+      edgeMesh.rotation.y += delta * 0.001;
+    }
   }
 
   lastTime = currTime;
@@ -364,6 +367,10 @@ button.addEventListener("click", () => {
       scene.remove(cloneMesh);
     }
 
+    if(edgeMesh){
+      scene.remove(edgeMesh)
+    }
+
     const geometry = new THREE.BufferGeometry();
     // 创建静态的顶点数据，例子中创建了一个不规则的三角形
     // 注意: 顶点是以x, y, z连续排列的
@@ -394,6 +401,16 @@ button.addEventListener("click", () => {
     // 创建一个Mesh（网格），将geometry和material传递给它
     cloneMesh = new THREE.Mesh(geometry, material);
     cloneMesh.translateX(500);
+
+    
+    const edgeGeometry = new THREE.EdgesGeometry(geometry);
+    var edgesMaterial = new THREE.LineBasicMaterial({
+      color: 0xff0000
+    })
+    edgeMesh = new THREE.LineSegments(edgeGeometry,edgesMaterial);
+    edgeMesh.translateX(500);
+
     scene.add(cloneMesh);
+    scene.add(edgeMesh)
   }
 });
