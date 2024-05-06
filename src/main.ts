@@ -220,6 +220,8 @@ function onMouseOver(event: MouseEvent) {
     decalMesh = new THREE.Mesh(geometry,decalMaterial)
     scene.add(decalMesh)
 
+    generateMesh()
+
     // decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
     // scene.add(decalMesh);
 
