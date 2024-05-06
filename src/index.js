@@ -313,6 +313,8 @@ function render() {
 
         colorAttr.needsUpdate = true;
       }
+
+      generateMesh()
     } else {
       controls.enabled = true;
       brushMesh.visible = false;
@@ -339,8 +341,7 @@ function render() {
 
 init();
 
-const button = document.getElementById("generate");
-button.addEventListener("click", () => {
+function generateMesh(){
   const colorAttr = targetMesh.geometry.getAttribute("color");
   const positionAttr = targetMesh.geometry.getAttribute("position");
   const points = [];
@@ -411,4 +412,9 @@ button.addEventListener("click", () => {
     scene.add(cloneMesh);
     scene.add(edgeMesh)
   }
+}
+
+const button = document.getElementById("generate");
+button.addEventListener("click", () => {
+  generateMesh()
 });
