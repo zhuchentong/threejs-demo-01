@@ -101,7 +101,7 @@ function createScene(element: HTMLDivElement): SceneObject {
 function createTargetMesh(target: SceneObject) {
   const loader = new STLLoader();
   return new Promise((resolve) => {
-    loader.load("/model.stl", function (geometry: any) {
+    loader.load("/02.stl", function (geometry: any) {
       const colorArray = new Uint8Array(geometry.attributes.position.count * 3);
       colorArray.fill(255);
       const colorAttr = new THREE.BufferAttribute(colorArray, 3, true);
@@ -114,6 +114,7 @@ function createTargetMesh(target: SceneObject) {
         metalness: 0,
         vertexColors: true,
         wireframe: false,
+        side: THREE.DoubleSide
       });
 
       //   const material = new THREE.MeshPhongMaterial({      side: THREE.DoubleSide,color: 0x555555, specular: 0x111111, shininess: 200 }); // 创建材质
