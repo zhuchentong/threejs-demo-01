@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Three.js Decal Example with OrbitControls</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script type="module">
+// Importing Three.js and OrbitControls
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three/build/three.module.js';
+// import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three/examples/jsm/controls/OrbitControls.js';
+// import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+import { OrbitControls } from 'https://cdn.skypack.dev/three/examples/jsm/controls/OrbitControls';
+
+// Setting up the scene, camera, and renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// OrbitControls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; // An animation loop is required when either damping or auto-rotation are enabled
+controls.dampingFactor = 0.25;
+controls.screenSpacePanning = false;
+
+// Moving the camera back so we can see the objects
+camera.position.z = 5;
+
+// Our basic box geometry with green material
+const geometry = new THREE.BoxGeometry();
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
+
+// Decal geometry setup
+const decalMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const decalGeometry = new THREE.PlaneGeometry(1, 1);
+const decal = new THREE.Mesh(decalGeometry, decalMaterial);
+scene.add(decal);
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function onMouseMove(event) {
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    
+    const intersects = raycaster.intersectObject(cube);
+    
+    if (intersects.length > 0) {
+        decal.position.copy(intersects[0].point);
+        decal.lookAt(camera.position);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update(); // Only required if controls.enableDamping = true, or if controls.autoRotate = true
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('mousemove', onMouseMove, false);
+
+animate();
+</script>
+</body>
+</html>

@@ -2,13 +2,37 @@ import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import * as THREE from "three"; // 导入three.js库
 import { STLLoader, OrbitControls } from "three/examples/jsm/Addons.js"; // 导入STLLoader模块
 
+
+import {
+  acceleratedRaycast,
+  computeBoundsTree,
+  disposeBoundsTree,
+  CONTAINED,
+  INTERSECTED,
+  NOT_INTERSECTED,
+  MeshBVH,
+} from "three-mesh-bvh";
+
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+(THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
+(THREE.BufferGeometry.prototype as any).disposeBoundsTree = disposeBoundsTree;
+
+
 const params = {
   rotate: true,
 };
+
+let scene: THREE.Scene;
+let camera: THREE.PerspectiveCamera;
+let controls: OrbitControls;
+let renderer: THREE.WebGLRenderer;
+let targetMesh: THREE.Mesh
+
 // 初始化场景
-const scene = new THREE.Scene();
+scene = new THREE.Scene();
+
 // 创建并设置相机
-const camera = new THREE.PerspectiveCamera(
+camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
@@ -23,17 +47,14 @@ gui.add(params, "rotate");
 gui.open();
 
 // 创建渲染器并设置其大小
-const renderer = new THREE.WebGLRenderer();
-// renderer.setClearColor(0xd3df56, 1); //设置背景颜色
 const bgColor = 0x263238 / 2;
-
-// renderer setup
+renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(bgColor, 1);
 document.body.appendChild(renderer.domElement); // 将渲染器的Canvas添加到body中
 
-const controls = new OrbitControls(camera, renderer.domElement);
+controls = new OrbitControls(camera, renderer.domElement);
 // 添加一些灯光
 const ambientLight = new THREE.AmbientLight(0xffffff, 100); // 环境光
 scene.add(ambientLight);
@@ -61,7 +82,8 @@ loader.load("/test.stl", function (geometry: any) {
   });
 
   //   const material = new THREE.MeshPhongMaterial({      side: THREE.DoubleSide,color: 0x555555, specular: 0x111111, shininess: 200 }); // 创建材质
-  const mesh = new THREE.Mesh(geometry, material); // 使用几何体和材质创建网格
+  targetMesh = new THREE.Mesh(geometry, material); // 使用几何体和材质创建网格
+  const mesh = targetMesh
   scene.add(mesh); // 将网格添加到场景中
 
   geometry.computeBoundingBox(); // 计算几何体的边界框，以便我们可以获取到模型的中心和大小
@@ -97,26 +119,41 @@ loader.load("/test.stl", function (geometry: any) {
   controls.update();
 });
 
-let lastTime =  window.performance.now()
-function updateRotate(){
-const currTime = window.performance.now();
-  if (params.rotate) {
-    const meshs = scene.children.filter(x=>x.type === 'Mesh')
-    const delta = currTime - lastTime;
+const brushGeometry = new THREE.SphereGeometry(1, 40, 40);
+const brushMaterial = new THREE.MeshStandardMaterial({
+  color: 0xec407a,
+  roughness: 0.75,
+  metalness: 0,
+  transparent: true,
+  opacity: 0.5,
+  premultipliedAlpha: true,
+  emissive: 0xec407a,
+  emissiveIntensity: 0.5,
+});
 
-    meshs.forEach(mesh=>{
-        mesh.rotation.y += delta * 0.001;
-    })
-  }
+const brushMesh = new THREE.Mesh(brushGeometry, brushMaterial);
+scene.add(brushMesh);
 
-  lastTime = currTime;
-}
+// let lastTime = window.performance.now();
+// function updateRotate() {
+//   const currTime = window.performance.now();
+//   if (params.rotate) {
+//     const meshs = scene.children.filter((x) => x.type === "Mesh");
+//     const delta = currTime - lastTime;
+
+//     meshs.forEach((mesh) => {
+//       mesh.rotation.y += delta * 0.001;
+//     });
+//   }
+
+//   lastTime = currTime;
+// }
 
 // 创建一个动画循环来渲染场景
 const animate = function () {
   requestAnimationFrame(animate);
 
-//   updateRotate()
+  render()
 
   renderer.render(scene, camera);
   controls.update();
@@ -131,3 +168,22 @@ window.addEventListener("resize", function () {
 
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+
+function render(){
+  const geometry = targetMesh.geometry;
+  const bvh = (geometry as any).boundsTree as MeshBVH;
+  const colorAttr = geometry.getAttribute("color");
+  const indexAttr = geometry.index;
+  const newVertices = [];
+
+  if (controls.active || !brushActive) {
+    brushMesh.visible = false;
+  } else {
+    brushMesh.scale.setScalar(params.size);
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    raycaster.firstHitOnly = true;
+  }
+}
