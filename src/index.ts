@@ -18,7 +18,6 @@ import {
   computeBoundsTree,
   disposeBoundsTree,
 } from "three-mesh-bvh";
-import { mod } from "three/examples/jsm/nodes/Nodes.js";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
@@ -28,17 +27,19 @@ let latestChangeControl: OrbitControls;
 let mouse = new THREE.Vector2();
 let brushActive = false;
 let intersect: THREE.Intersection | undefined;
+const raycaster = new THREE.Raycaster();
 
 const params = {
   radius: 0.05,
-  density: 2000,
+  density: 50,
+  frame: false,
 };
 
 const gui = new dat.GUI();
-gui.add(params, "radius").min(0.01).max(10).step(0.01);
-gui.add(params, "density").min(100).max(5000).step(1);
+gui.add(params, "radius").min(0.01).max(0.1).step(0.01);
+gui.add(params, "density").min(20).max(100).step(1);
+gui.add(params, "frame")
 gui.open();
-
 
 const rightMaterial = new THREE.MeshPhongMaterial({
   color: 0x156289, // 基础颜色
@@ -115,7 +116,7 @@ function createTargetMesh(target: SceneObject) {
         metalness: 0,
         vertexColors: true,
         wireframe: false,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
       });
 
       //   const material = new THREE.MeshPhongMaterial({      side: THREE.DoubleSide,color: 0x555555, specular: 0x111111, shininess: 200 }); // 创建材质
@@ -199,25 +200,35 @@ animate(); // 开始动画循环
 function getCirclePoints() {
   let points = []; // 存储圆内点的数组
   let radius = params.radius;
-  for (let i = 0; i < params.density; i++) {
-    let angle = Math.random() * Math.PI * 2; // 随机角度
-    let r = radius * Math.sqrt(Math.random()); // 随机半径
+  let density = params.density;
 
-    // 转换为笛卡尔坐标系
-    let x = mouse.x + r * Math.cos(angle);
-    let y = mouse.y + r * Math.sin(angle);
+  const startX = mouse.x - radius;
+  const startY = mouse.y - radius;
 
-    // 将点添加到列表中
-    points.push(new THREE.Vector2(x, y));
+  const step = (radius * 2) / density;
+
+  for (let i = 0; i < density; i++) {
+    for (let j = 0; j < density; j++) {
+      points.push(new THREE.Vector2(startX + step * i, startY + step * j));
+    }
   }
+
+  // for (let i = 0; i < params.density; i++) {
+  //   let angle = Math.random() * Math.PI * 2; // 随机角度
+  //   let r = radius * Math.sqrt(Math.random()); // 随机半径
+  //   // 转换为笛卡尔坐标系
+  //   let x = mouse.x + r * Math.cos(angle);
+  //   let y = mouse.y + r * Math.sin(angle);
+  //   // 将点添加到列表中
+  //   points.push(new THREE.Vector2(x, y));
+  // }
   return points;
 }
 
 function render() {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, left.camera);
-  const intersects = raycaster.intersectObject(left.mesh!, true);
-
+  const intersects = raycaster.intersectObject(left.mesh!, false);
   const intersect = intersects.find((item) => item.object === left.mesh);
 
   if (intersect) {
@@ -272,14 +283,13 @@ left.element.addEventListener(
 
 function updateGeometryColor() {
   const points = getCirclePoints();
+
   let geometry = left.mesh!.geometry;
   let colors = geometry.attributes.color;
   let cacheFaces: number[] = [];
 
   points?.forEach((point) => {
-    const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(point, left.camera);
-
     const intersects = raycaster.intersectObject(left.mesh!, true);
     intersect = intersects.find((x) => x.object === left.mesh);
 
@@ -306,7 +316,7 @@ function updateGeometryColor() {
   colors.needsUpdate = true;
 }
 
-let line:any = null
+let line: any = null;
 
 function updateRightMesh() {
   const colorAttr = left.mesh!.geometry.getAttribute("color");
@@ -341,13 +351,18 @@ function updateRightMesh() {
     right.scene.remove(right.mesh);
   }
 
-  if(line){
-    right.scene.remove(line)
+  if (line) {
+    right.scene.remove(line);
   }
 
-  var edges = new THREE.EdgesGeometry( geometry,180 );
-  line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial( { color: 0xff0000 } ) );
-  right.scene.add(line)
+  if (params.frame) {
+    var edges = new THREE.EdgesGeometry(geometry, 180);
+    line = new THREE.LineSegments(
+      edges,
+      new THREE.LineBasicMaterial({ color: 0xff0000 })
+    );
+    right.scene.add(line);
+  }
 
   const mesh = new THREE.Mesh(geometry, rightMaterial);
   right.mesh = mesh;
