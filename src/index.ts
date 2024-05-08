@@ -2,7 +2,7 @@ import { OrbitControls, STLLoader } from "three/examples/jsm/Addons.js";
 import "./style.css";
 import * as THREE from "three";
 import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
-
+import Stats from "stats-js";
 interface SceneObject {
   scene: THREE.Scene;
   element: HTMLDivElement;
@@ -27,6 +27,7 @@ let latestChangeControl: OrbitControls;
 let mouse = new THREE.Vector2();
 let brushActive = false;
 let intersect: THREE.Intersection | undefined;
+const stats = new Stats();
 const raycaster = new THREE.Raycaster();
 
 const params = {
@@ -168,10 +169,12 @@ const right = createScene(document.getElementById("right") as HTMLDivElement);
 async function init() {
   await createTargetMesh(left);
   // await createTargetMesh(right);
+  document.body.appendChild(stats.dom);
 }
 
 // 创建一个动画循环来渲染场景
 const animate = function () {
+  stats.begin()
   requestAnimationFrame(animate);
   if (latestChangeControl === left.controls) {
     right.controls.target.copy(left.controls.target);
@@ -193,6 +196,7 @@ const animate = function () {
 
   left.renderer.render(left.scene, left.camera);
   right.renderer.render(right.scene, right.camera);
+  stats.end()
 };
 
 animate(); // 开始动画循环
