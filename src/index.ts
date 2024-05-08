@@ -18,6 +18,7 @@ import {
   computeBoundsTree,
   disposeBoundsTree,
 } from "three-mesh-bvh";
+import { mod } from "three/examples/jsm/nodes/Nodes.js";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
@@ -101,7 +102,7 @@ function createScene(element: HTMLDivElement): SceneObject {
 function createTargetMesh(target: SceneObject) {
   const loader = new STLLoader();
   return new Promise((resolve) => {
-    loader.load("/02.stl", function (geometry: any) {
+    loader.load("/model.stl", function (geometry: any) {
       const colorArray = new Uint8Array(geometry.attributes.position.count * 3);
       colorArray.fill(255);
       const colorAttr = new THREE.BufferAttribute(colorArray, 3, true);
@@ -305,6 +306,8 @@ function updateGeometryColor() {
   colors.needsUpdate = true;
 }
 
+let line:any = null
+
 function updateRightMesh() {
   const colorAttr = left.mesh!.geometry.getAttribute("color");
   const positionAttr = left.mesh!.geometry.getAttribute("position");
@@ -337,6 +340,14 @@ function updateRightMesh() {
   if (right.mesh) {
     right.scene.remove(right.mesh);
   }
+
+  if(line){
+    right.scene.remove(line)
+  }
+
+  var edges = new THREE.EdgesGeometry( geometry,180 );
+  line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial( { color: 0xff0000 } ) );
+  right.scene.add(line)
 
   const mesh = new THREE.Mesh(geometry, rightMaterial);
   right.mesh = mesh;
