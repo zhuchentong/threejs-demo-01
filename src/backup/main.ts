@@ -1,285 +1,261 @@
-import {
-  DecalGeometry,
-  OrbitControls,
-  STLLoader,
-} from "three/examples/jsm/Addons.js";
-import "./style.css";
-import * as THREE from "three";
-import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
+import * as THREE from "three"; // 导入three.js库
+import { STLLoader, OrbitControls } from "three/examples/jsm/Addons.js"; // 导入STLLoader模块
+// 基础设置
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-// const cache: { decalPosition: THREE.Vector3; euler: THREE.Euler }[] = [];
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.z = 5;
 
-let scene: THREE.Scene;
-let camera: THREE.PerspectiveCamera;
-let renderer: THREE.Renderer;
-let loader: THREE.Loader;
-let controls: OrbitControls;
-let light: THREE.AmbientLight;
-let mesh: THREE.Mesh;
-let cloneMesh: THREE.Mesh;
-let decalMesh: THREE.Mesh;
-let meshList: THREE.BufferGeometry[] = [];
-// let decalGeometry: DecalGeometry;
+camera.position.set(0, 0, 5);
+camera.lookAt(0, 0, 0); // 确保相机朝向原点，假设模型位于原点
+const controls = new OrbitControls(camera, renderer.domElement);
+// 添加环境光和定向光源
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
 
-var decalSize = new THREE.Vector3(40, 40, 5); // 尺寸可以根据你的需要调整
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 3, 5);
+scene.add(directionalLight);
 
-// 假设您已经有了一个mesh，该mesh使用了MeshStandardMaterial
-const textureLoader = new THREE.TextureLoader();
-const texture = textureLoader.load("/image.png");
+let cube: any;
+const loader = new STLLoader();
 
-const decalMaterial = new THREE.MeshPhongMaterial({
-  // map: texture,
-  color: 0x28e430,
-  transparent: true,
-  depthTest: true,
-  depthWrite: false,
-  polygonOffset: true,
-  polygonOffsetFactor: -4,
+loader.load("/model.stl", function (geometry) {
+  const colorArray = new Uint8Array(geometry.attributes.position.count * 3);
+  colorArray.fill(255);
+  const colorAttr = new THREE.BufferAttribute(colorArray, 3, true);
+  colorAttr.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute("color", colorAttr);
+
+  const knotMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.3,
+    metalness: 0,
+    vertexColors: true,
+    wireframe: false,
+  });
+  cube = new THREE.Mesh(geometry, knotMaterial);
+  scene.add(cube);
+});
+// 更改模型的材质和颜色以便看到效果
+const material = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.3,
+  metalness: 0,
+  vertexColors: true,
   wireframe: false,
 });
 
-const cloneMaterial = new THREE.MeshPhongMaterial({
-  color: 0x156289, // 基础颜色
-  emissive: 0x072534, // 自发颜色
-  side: THREE.DoubleSide, // 材质的两面都可见
-  flatShading: true, // 平面着色
-  shininess: 100, // 高光强度，数值越大越明显
-  specular: 0x111111, // 高光颜色，此属性会影响高光的颜色
-  wireframe: true,
-});
+// 确保渲染器尺寸与窗口匹配
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-function init() {
-  // 创建场景
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
+// 创建几何体和材质，并添加到场景中
+// const geometry = new THREE.BoxGeometry(100, 100, 100);
+// // const material = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true });
+// const material = new THREE.MeshPhongMaterial({ color: 0xffffff, vertexColors: true });
+// const cube = new THREE.Mesh(geometry, material);
+// scene.add(cube);
 
-  // 创建摄像头
-  camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.01,
-    10000
-  );
+// 射线投射和鼠标
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 
-  // 创建渲染器并添加到HTML
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+// 颜色和画笔大小
+const brushColor = new THREE.Color("rgb(255,0,0)");
+const brushSize = 0.1; // 需要根据几何体尺寸调整
 
-  camera.position.z = 10;
-  controls = new OrbitControls(camera, renderer.domElement);
+// 事件监听器
+window.addEventListener("resize", onWindowResize, false);
+// window.addEventListener("mousemove", onMouseMove, false);
+window.addEventListener("mousedown", onMouseMove, false);
 
-  light = new THREE.AmbientLight(0x404040);
-  scene.add(light);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
-  directionalLight.position.set(1, 1, 1);
-  scene.add(directionalLight);
-
-  const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight1.position.set(-1, -1, -1);
-  scene.add(directionalLight1);
-
-  // 创建STL加载器并加载模型
-
-  // 创建STL加载器并加载模型
-  loader = new STLLoader();
-  loader.load("/test.stl", function (event: any) {
-    var geometry = event!.content!;
-    scene.add(new THREE.Mesh(geometry));
-  });
-
-  // 调整视角大小跟随窗口变化
-  window.addEventListener("resize", onWindowResize);
-
-  renderer.domElement.addEventListener("mousedown", onMouseDown);
-  renderer.domElement.addEventListener("mousemove", onMouseOver);
-  renderer.domElement.addEventListener("mouseup", onMouseUp);
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-
+// 窗口大小调整时的处理
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// 射线投射，用来检测点击的对象
-var raycaster = new THREE.Raycaster();
-var mouse = new THREE.Vector2();
-let dragging = false;
-
-// const MAX_EVENTS = 10; // 触发处理的累积事件数量阈值
-// const INTERVAL = 100; // 触发处理的时间间隔（毫秒）
-
-function onMouseDown(event: MouseEvent) {
+// 更新鼠标位置
+function onMouseMove(event: any) {
   event.preventDefault();
 
-  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-  // 更新射线投射的位置
   raycaster.setFromCamera(mouse, camera);
-  // 计算物体和射线的交点
-  var intersects = raycaster.intersectObject(mesh);
-  if (intersects.some((x) => x.object === mesh)) {
-    dragging = true;
-    controls.enablePan = false;
-    controls.enableZoom = false;
-    controls.enableRotate = false;
-  }
+  var intersects = raycaster.intersectObjects(scene.children,true);
+  var intersect = intersects[0]
+  console.log(intersect)
+
+  var direction = new THREE.Vector3()
+      .subVectors(vertex, camera.position)
+      .normalize();
+  // var geometry = cube.geometry;
+  // var attributes = geometry.attributes;
+  // const position = attributes.position;
+  // var colorAttribute = geometry.attributes.color;
+
+  // // var epsilon = 0.00001;
+  // // console.log(scene.children)
+  // // var intersects = raycaster.intersectObjects(cube,true);
+  // // console.log(intersects)
+
+  // for (
+  //   var vertexIndex = 0;
+  //   vertexIndex < position.count;
+  //   vertexIndex++
+  // ) {
+  //   var vertex = new THREE.Vector3();
+  //   vertex.fromBufferAttribute(position, vertexIndex);
+
+  //   var direction = new THREE.Vector3()
+  //     .subVectors(vertex, camera.position)
+  //     .normalize();
+
+  //   raycaster.set(intersect.point, direction);
+  //   raycaster.far = vertex.distanceTo(intersect.point);
+
+  //   var intersects2 = raycaster.intersectObject(intersect.object, true);
+  //   console.log(intersects2.length, raycaster.far - 10);
+  //   if (
+  //     intersects2.length === 0 ||
+  //     intersects2[0].distance >= raycaster.far - 10
+  //   ) {
+  //     colorAttribute.setXYZ(
+  //       vertexIndex,
+  //       brushColor.r,
+  //       brushColor.g,
+  //       brushColor.b
+  //     );
+  //   }
+  // }
+  // colorAttribute.needsUpdate = true;
 }
 
-function onMouseUp(event: MouseEvent) {
-  event.preventDefault();
-  dragging = false;
+// 绘画函数
+// function paint(event: any) {
+//   // 通过投射一条射线来检查什么物体被点击
+//   raycaster.setFromCamera(mouse, camera);
 
-  controls.enablePan = true;
-  controls.enableZoom = true;
-  controls.enableRotate = true;
-}
+//   // 计算物体和射线的交点
+//   var intersects = raycaster.intersectObjects(scene.children);
 
-function onMouseOver(event: MouseEvent) {
-  if (!dragging) {
-    return;
-  }
+//   if (intersects.length > 0) {
+//     var intersect = intersects[0];
+//     // 你可以在此处进行涂色操作，例如：
+//     var brushSize = 20; // 画刷的大小
+//     var color = new THREE.Color(0xff9900); // 需要涂上的颜色
 
-  event.preventDefault();
+//     var geometry = cube.geometry;
+//     var attributes = cube.geometry.attributes;
+//     const position = cube.geometry.getAttribute("position");
+//     var positionAttribute = geometry.attributes.position;
+//     var normalAttribute = geometry.attributes.normal;
+//     var colorAttribute = geometry.attributes.color;
+//     // 遍历所有顶点
+//     // for (var i = 0, n = position.count; i < n; i++) {
+//     //   // 如果顶点距离交点的距离小于画刷大小，则更改其颜色
+//     //   // const x = position.getX(i);
+//     //   // const y = position.getY(i);
+//     //   // const z = position.getZ(i);
 
-  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+//     //   // 使用这些分量来创建一个 THREE.Vector3 对象
+//     //   const vertex = new THREE.Vector3();
+//     //   vertex.fromBufferAttribute(positionAttribute, i);
 
-  // 更新射线投射的位置
-  raycaster.setFromCamera(mouse, camera);
+//     //   // if (vertex.distanceTo(intersect.point) < brushSize) {
+//     //   //   attributes.color.setXYZ(i, color.r, color.g, color.b);
+//     //   // }
+//     //   var vertexNormal = new THREE.Vector3();
+//     //   vertexNormal.fromBufferAttribute(normalAttribute, i);
+//     //   // console.log(vertexNormal.dot(intersect!.face!.normal))
+//     //   if (vertex.distanceTo(intersect.point) < brushSize && vertexNormal.dot(intersect!.face!.normal) >= 0) {
+//     //     // 在color属性中设置顶点的颜色
+//     //     attributes.color.setXYZ(i, color.r, color.g, color.b);
+//     //   }
+//     // }
 
-  // 计算物体和射线的交点
-  var intersects = raycaster.intersectObject(mesh);
-  const intersect = intersects.find((x) => x.object === mesh);
+//     //   for (var vertexIndex = 0; vertexIndex < positionAttribute.count; vertexIndex++) {
+//     //     // 提取当前顶点
+//     //     var vertex = new THREE.Vector3();
+//     //     vertex.fromBufferAttribute(positionAttribute, vertexIndex);
 
-  if (intersect && intersect.face) {
-    // // 创建一个平面几何体，作为“喷漆”图案
-    // var decalGeometry = new DecalGeometry(intersect.object, 96);
-    // // var decalMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    // // var decalMaterial = new THREE.MeshBasicMaterial({
-    // //   color: 0xff0000,
-    // //   side: THREE.DoubleSide,
-    // // });
+//     //     // 提取当前顶点的法线
+//     //     var vertexNormal = new THREE.Vector3();
+//     //     vertexNormal.fromBufferAttribute(normalAttribute, vertexIndex);
+//     // console.log(vertexNormal.dot(intersect!.face!.normal) )
+//     //     // 创建一个从交点指向当前顶点的辅助方向射线
+//     //     // var direction = new THREE.Vector3().subVectors(vertex, intersect.point).normalize();
 
-    // const decalMaterial = new THREE.MeshStandardMaterial({
-    //   metalness: 1.0, // 设置金属度为 1.0
-    //   roughness: 0.5, // 设置粗糙度为 0.5
-    //   color: 0xff0000, // 设置材质颜色为红色
-    //   // map: texture,
-    // });
+//     //     // 如果当前顶点与射线相交点的距离小于画刷大小，并且顶点的法线方向与射线方向一致
+//     //     if (vertex.distanceTo(intersect.point) < brushSize && vertexNormal.dot(intersect!.face!.normal) >= 0) {
+//     //         // 在color属性中设置顶点的颜色
+//     //         colorAttribute.setXYZ(vertexIndex, brushColor.r, brushColor.g, brushColor.b);
+//     //     }
+//     // }
+//     //   // 需要设定color需要更新
+//     //   cube.geometry.attributes.color.needsUpdate = true;
+//     // }
 
-    // var decal = new THREE.Mesh(decalGeometry, decalMaterial);
+//     for (
+//       var vertexIndex = 0;
+//       vertexIndex < positionAttribute.count;
+//       vertexIndex++
+//     ) {
+//       // 提取当前顶点
+//       var vertex = new THREE.Vector3();
+//       vertex.fromBufferAttribute(positionAttribute, vertexIndex);
 
-    // // 将平面贴在模型表面上
-    // decal.position.copy(intersect.point);
-    // decal.position.add(intersect.face.normal.multiplyScalar(0.1));
-    // decal.lookAt(intersect.face.normal.add(intersect.point));
-    // scene.add(decal);
+//       // 提取当前顶点的法线
+//       var vertexNormal = new THREE.Vector3();
+//       vertexNormal.fromBufferAttribute(normalAttribute, vertexIndex);
 
-    var decalNormal = intersect.face.normal;
-    var decalPosition = intersect.point;
+//       // 创建一个从交点指向当前顶点的向量
+//       var direction = new THREE.Vector3()
+//         .subVectors(vertex, intersect.point)
+//         .normalize();
 
-    // 创建贴花
-    // .setRotationFromQuaternion 
-    var quaternion = new THREE.Quaternion();
-    quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), decalNormal);
-    var euler = new THREE.Euler().setFromQuaternion(quaternion, "XYZ");
+//       // 使用交点处的表面法线作为过滤条件
+//       var faceNormal = intersect!.face!.normal;
 
-    const decalGeometry = new DecalGeometry(
-      mesh,
-      decalPosition,
-      euler,
-      decalSize
-    );
-    meshList.push(decalGeometry);
+//       // 计算辅助方向射线与顶点法线的点积，用于判断顶点是否面向射线
+//       var normalDot = vertexNormal.dot(direction);
 
-    if (decalMesh) {
-      scene.remove(decalMesh);
-    }
-    const temp = BufferGeometryUtils.mergeGeometries(meshList);
-    const geometry = BufferGeometryUtils.mergeVertices(temp, 0);
+//       // 计算顶点法线与面法线的点积，判断顶点方向是否与面的方向一致
+//       var faceNormalDot = vertexNormal.dot(faceNormal);
 
-    decalMesh = new THREE.Mesh(geometry, decalMaterial);
-    scene.add(decalMesh);
-
-    generateMesh();
-
-    // decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-    // scene.add(decalMesh);
-
-    // cache.push({
-    //   decalPosition,
-    //   euler,
-    // });
-
-    // const decalGeometry = new DecalGeometry(
-    //   mesh,
-    //   decalPosition,
-    //   euler,
-    //   decalSize
-    // );
-
-    // console.time("task:4-2");
-    // var decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-    // console.timeEnd("task:4-2");
-    // console.time("task:5");
-    // scene.add(decalMesh);
-    // console.timeEnd("task:5");
-  }
-}
-
-init();
-animate();
-
-// const createDecalGeometry: IdleRequestCallback = (deadline) => {
-//   if (deadline.timeRemaining() > 1) {
-//     if (cache.length > 0 && mesh) {
-//       const data = cache.shift();
-
-//       if (data) {
-//         const decalGeometry = new DecalGeometry(
-//           mesh,
-//           data.decalPosition,
-//           data.euler,
-//           decalSize
+//       if (
+//         vertex.distanceTo(intersect.point) < brushSize &&
+//         normalDot > 0 &&
+//         faceNormalDot > 0
+//       ) {
+//         // 在color属性中设置顶点的颜色
+//         colorAttribute.setXYZ(
+//           vertexIndex,
+//           brushColor.r,
+//           brushColor.g,
+//           brushColor.b
 //         );
-
-//         var decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-//         scene.add(decalMesh);
 //       }
 //     }
 //   }
+// }
 
-//   requestIdleCallback(createDecalGeometry);
-// };
-
-// requestIdleCallback(createDecalGeometry);
-
-const button = document.getElementById("generate");
-
-if (button) {
-  button.addEventListener("click", () => {
-    generateMesh();
-  });
+// 渲染循环
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
 
-function generateMesh() {
-  if (cloneMesh) {
-    scene.remove(cloneMesh);
-  }
-  const temp = BufferGeometryUtils.mergeGeometries(meshList);
-  const geometry = BufferGeometryUtils.mergeVertices(temp, 20);
-
-  cloneMesh = new THREE.Mesh(geometry, cloneMaterial);
-  cloneMesh.translateX(-500);
-  scene.add(cloneMesh);
-}
+animate();

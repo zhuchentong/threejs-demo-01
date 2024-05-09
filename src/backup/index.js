@@ -17,7 +17,7 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 const params = {
-  size: 30,
+  size: 10,
   rotate: false,
   frame: true,
 };
@@ -88,6 +88,7 @@ function init() {
     });
     targetMesh = new THREE.Mesh(geometry, knotMaterial);
     targetMesh.geometry.computeBoundsTree();
+    targetMesh.goto = "12312312";
     scene.add(targetMesh);
     render();
   });
@@ -224,8 +225,8 @@ function render() {
   const bvh = geometry.boundsTree;
   const colorAttr = geometry.getAttribute("color");
   const indexAttr = geometry.index;
+  const vertices = geometry.vertices;
   const newVertices = [];
-
 
   if (controls.active || !brushActive) {
     brushMesh.visible = false;
@@ -237,6 +238,7 @@ function render() {
     raycaster.firstHitOnly = true;
 
     const res = raycaster.intersectObject(targetMesh, true);
+
     if (res.length) {
       brushMesh.position.copy(res[0].point);
       controls.enabled = false;
@@ -251,6 +253,7 @@ function render() {
 
       const indices = [];
       const tempVec = new THREE.Vector3();
+
       bvh.shapecast({
         intersectsBounds: (box) => {
           const intersects = sphere.intersectsBox(box);
@@ -296,20 +299,42 @@ function render() {
           g = 78 / 255;
           b = 85 / 255;
         }
-
-
         for (let i = 0, l = indices.length; i < l; i++) {
           const i2 = indexAttr.getX(indices[i]);
-          colorAttr.setX(i2, r);
-          colorAttr.setY(i2, g);
-          colorAttr.setZ(i2, b);
+
+          var positionAttribute = targetMesh.geometry.attributes.position;
+          var pointA = new THREE.Vector3();
+          pointA.fromBufferAttribute(positionAttribute, i2);
+          var pointB = camera.position;
+
+          // const material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+          // const geometry = new THREE.BufferGeometry().setFromPoints([
+          //   pointB,
+          //   pointA,
+          // ]);
+          // const line = new THREE.Line(geometry, material);
+          // scene.add(line);
+
+          var direction = new THREE.Vector3()
+            .subVectors(pointB, pointA)
+            .normalize();
+          var ray = new THREE.Raycaster(pointA, direction);
+          ray.far = pointA.distanceTo(pointB);
+
+          var intersects2 = ray.intersectObject(targetMesh, true);
+          // console.log(intersects2[0], ray.far)
+          if (intersects2.length === 0 || intersects2[0].distance >= ray.far - 1) {
+            colorAttr.setX(i2, r);
+            colorAttr.setY(i2, g);
+            colorAttr.setZ(i2, b);
+          }
         }
 
         colorAttr.needsUpdate = true;
       }
 
       if (params.frame) {
-        generateMesh();
+        // generateMesh();
       }
     } else {
       controls.enabled = true;

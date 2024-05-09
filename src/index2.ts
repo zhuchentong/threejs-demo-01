@@ -3,6 +3,7 @@ import "./style.css";
 import * as THREE from "three";
 import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "stats-js";
+
 interface SceneObject {
   scene: THREE.Scene;
   element: HTMLDivElement;
@@ -17,33 +18,32 @@ import {
   acceleratedRaycast,
   computeBoundsTree,
   disposeBoundsTree,
+  CONTAINED,
+  INTERSECTED,
+  NOT_INTERSECTED,
 } from "three-mesh-bvh";
 
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
 (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
 (THREE.BufferGeometry.prototype as any).disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 let latestChangeControl: OrbitControls;
 let mouse = new THREE.Vector2();
+let mouseType = -1;
 let brushActive = false;
-let intersect: THREE.Intersection | undefined;
+let brushMesh: THREE.Mesh;
 const stats = new Stats();
 const raycaster = new THREE.Raycaster();
+(raycaster as any).firstHitOnly = true;
 
 const params = {
-  radius: 0.05,
-  density: 50,
+  size: 10,
   frame: false,
-  model:  new URL(location.href).searchParams.get('model')||'model-01',
 };
 
 const gui = new dat.GUI();
-gui.add(params, "radius").min(0.01).max(0.1).step(0.01).name("画刷尺寸");
-gui.add(params, "density").min(20).max(100).step(1).name("画刷密度");
-gui.add(params, "frame").name("框架边缘");
-gui.add(params, "model",['model-01','model-02','model-03','model-04','model-05']).onChange((value)=>{
-  location.search = `?model=${value}`;
-});
+gui.add(params, "size").min(1).max(50).step(1);
+gui.add(params, "frame");
 gui.open();
 
 const rightMaterial = new THREE.MeshPhongMaterial({
@@ -108,7 +108,22 @@ function createScene(element: HTMLDivElement): SceneObject {
 function createTargetMesh(target: SceneObject) {
   const loader = new STLLoader();
   return new Promise((resolve) => {
-    loader.load(`/${params.model}.stl`, function (geometry: any) {
+    loader.load("/model.stl", function (geometry: any) {
+      const brushGeometry = new THREE.SphereGeometry(1, 40, 40);
+      const brushMaterial = new THREE.MeshStandardMaterial({
+        color: 0xec407a,
+        roughness: 0.75,
+        metalness: 0,
+        transparent: true,
+        opacity: 0.5,
+        premultipliedAlpha: true,
+        emissive: 0xec407a,
+        emissiveIntensity: 0.5,
+      });
+
+      brushMesh = new THREE.Mesh(brushGeometry, brushMaterial);
+      target.scene.add(brushMesh);
+
       const colorArray = new Uint8Array(geometry.attributes.position.count * 3);
       colorArray.fill(255);
       const colorAttr = new THREE.BufferAttribute(colorArray, 3, true);
@@ -180,6 +195,7 @@ async function init() {
 const animate = function () {
   stats.begin();
   requestAnimationFrame(animate);
+
   if (latestChangeControl === left.controls) {
     right.controls.target.copy(left.controls.target);
     right.controls.object.position.copy(left.controls.object.position);
@@ -194,7 +210,11 @@ const animate = function () {
     left.controls.update();
   }
 
-  if (left.mesh && brushActive) {
+  if (!brushActive && brushMesh) {
+    brushMesh.visible = false;
+  }
+
+  if (left.mesh && brushMesh && brushActive) {
     render();
   }
 
@@ -205,43 +225,18 @@ const animate = function () {
 
 animate(); // 开始动画循环
 
-function getCirclePoints() {
-  let points = []; // 存储圆内点的数组
-  let radius = params.radius;
-  let density = params.density;
-
-  const startX = mouse.x - radius;
-  const startY = mouse.y - radius;
-
-  const step = (radius * 2) / density;
-
-  for (let i = 0; i < density; i++) {
-    for (let j = 0; j < density; j++) {
-      points.push(new THREE.Vector2(startX + step * i, startY + step * j));
-    }
-  }
-
-  // for (let i = 0; i < params.density; i++) {
-  //   let angle = Math.random() * Math.PI * 2; // 随机角度
-  //   let r = radius * Math.sqrt(Math.random()); // 随机半径
-  //   // 转换为笛卡尔坐标系
-  //   let x = mouse.x + r * Math.cos(angle);
-  //   let y = mouse.y + r * Math.sin(angle);
-  //   // 将点添加到列表中
-  //   points.push(new THREE.Vector2(x, y));
-  // }
-  return points;
-}
-
 function render() {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, left.camera);
   const intersects = raycaster.intersectObject(left.mesh!, false);
-  const intersect = intersects.find((item) => item.object === left.mesh);
+  const intersect = intersects[0];
 
   if (intersect) {
     updateGeometryColor();
     updateRightMesh();
+  } else {
+    brushMesh.visible = false;
+    left.controls.enabled = true;
   }
 }
 
@@ -259,7 +254,7 @@ window.addEventListener("resize", function () {
 left.element.addEventListener("pointermove", function (e) {
   mouse.x = (e.clientX / left.element.clientWidth) * 2 - 1;
   mouse.y = -(e.clientY / left.element.clientHeight) * 2 + 1;
-  // brushActive = true;
+  brushActive = true;
 });
 
 left.element.addEventListener(
@@ -267,11 +262,13 @@ left.element.addEventListener(
   function (e) {
     mouse.x = (e.clientX / left.element.clientWidth) * 2 - 1;
     mouse.y = -(e.clientY / left.element.clientHeight) * 2 + 1;
+    mouseType = e.button;
     // brushActive = true;
     // disable the controls early if we're over the object because on touch screens
     // we're not constantly tracking where the cursor is.
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, left.camera);
+    (raycaster as any).firstHitOnly = true;
 
     const res = raycaster.intersectObject(left.mesh!, true);
     brushActive = true;
@@ -282,46 +279,158 @@ left.element.addEventListener(
 
 left.element.addEventListener(
   "pointerup",
-  function (e) {
+  function () {
+    mouseType = -1;
     brushActive = false;
     left.controls.enabled = true;
   },
   true
 );
 
+function getIntersectsFromPoint(pointA: THREE.Vector3) {
+  var pointB = left.camera.position;
+
+  var direction = new THREE.Vector3().subVectors(pointB, pointA).normalize();
+
+  var ray = new THREE.Raycaster(pointA, direction);
+  ray.far = pointA.distanceTo(pointB);
+
+  return ray.intersectObject(left.mesh!, true);
+}
 function updateGeometryColor() {
-  const points = getCirclePoints();
+  const geometry = left.mesh!.geometry;
+  const bvh = (geometry as any).boundsTree;
+  const colorAttr = geometry.getAttribute("color");
+  const indexAttr = geometry.index!;
 
-  let geometry = left.mesh!.geometry;
-  let colors = geometry.attributes.color;
-  let cacheFaces: number[] = [];
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, left.camera);
+  (raycaster as any).firstHitOnly = true;
 
-  points?.forEach((point) => {
-    raycaster.setFromCamera(point, left.camera);
-    const intersects = raycaster.intersectObject(left.mesh!, true);
-    intersect = intersects.find((x) => x.object === left.mesh);
+  const res = raycaster.intersectObject(left.mesh!, true);
 
-    if (
-      intersect &&
-      intersect.faceIndex &&
-      !cacheFaces.includes(intersect.faceIndex)
-    ) {
-      cacheFaces.push(intersect.faceIndex);
-      let faceIndex = intersect.faceIndex;
-      // 根据faceIndex计算此面的顶点索引
-      let indexAttribute = geometry.index!;
-      let indices = indexAttribute.array;
-      let verticesPerFace = 3;
-      let baseIndex = faceIndex * verticesPerFace;
+  if (res.length) {
+    left.controls.enabled = false;
+    brushMesh.position.copy(res[0].point);
+    left.controls.enabled = false;
+    brushMesh.visible = true;
+    brushMesh.scale.setScalar(params.size);
 
-      for (let i = 0; i < verticesPerFace; i++) {
-        // 修改面每个顶点的颜色
-        colors.setXYZ(indices[baseIndex + i], 15 / 255, 85 / 255, 78 / 255); // 设置红色
+    const inverseMatrix = new THREE.Matrix4();
+    inverseMatrix.copy(left.mesh!.matrixWorld).invert();
+
+    const sphere = new THREE.Sphere();
+    sphere.center.copy(brushMesh.position).applyMatrix4(inverseMatrix);
+    sphere.radius = params.size;
+
+    const indices: number[] = [];
+    const tempVec = new THREE.Vector3();
+
+    bvh.shapecast({
+      intersectsBounds: (box: THREE.Box3) => {
+        const intersects = sphere.intersectsBox(box);
+        const { min, max } = box;
+        if (intersects) {
+          for (let x = 0; x <= 1; x++) {
+            for (let y = 0; y <= 1; y++) {
+              for (let z = 0; z <= 1; z++) {
+                tempVec.set(
+                  x === 0 ? min.x : max.x,
+                  y === 0 ? min.y : max.y,
+                  z === 0 ? min.z : max.z
+                );
+                if (!sphere.containsPoint(tempVec)) {
+                  return INTERSECTED;
+                }
+              }
+            }
+          }
+
+          return CONTAINED;
+        }
+
+        return intersects ? INTERSECTED : NOT_INTERSECTED;
+      },
+
+      intersectsTriangle: (tri: any, i: number, contained: boolean) => {
+        if (contained || tri.intersectsSphere(sphere)) {
+          const i3 = 3 * i;
+          indices.push(i3, i3 + 1, i3 + 2);
+        }
+
+        return false;
+      },
+    });
+
+    if (mouseType === 0 || mouseType === 2) {
+      let r = 1,
+        g = 1,
+        b = 1;
+
+      if (mouseType === 0) {
+        r = 15 / 255;
+        g = 78 / 255;
+        b = 85 / 255;
       }
-    }
-  });
 
-  colors.needsUpdate = true;
+      const count = indices.length / 3;
+
+      for (let i = 0; i < count; i++) {
+        const i1 = indexAttr.getX(indices[i]);
+        const i2 = indexAttr.getX(indices[i + 1]);
+        const i3 = indexAttr.getX(indices[i + 2]);
+
+        var positionAttribute = left.mesh!.geometry.attributes.position;
+        var pointA1 = new THREE.Vector3();
+        pointA1.fromBufferAttribute(positionAttribute, i1);
+        var pointA2 = new THREE.Vector3();
+        pointA1.fromBufferAttribute(positionAttribute, i2);
+        var pointA3 = new THREE.Vector3();
+        pointA1.fromBufferAttribute(positionAttribute, i3);
+
+        const intersects1 = getIntersectsFromPoint(pointA1);
+        const intersects2 = getIntersectsFromPoint(pointA2);
+        const intersects3 = getIntersectsFromPoint(pointA3);
+
+        if (
+          intersects1.length === 0 ||
+          intersects2.length === 0 ||
+          intersects3.length === 0 ||
+          true
+        ) {
+          colorAttr.setXYZ(i1, r, g, b);
+          colorAttr.setXYZ(i2, r, g, b);
+          colorAttr.setXYZ(i3, r, g, b);
+        }
+      }
+
+      // for (let i = 0, l = indices.length; i < l; i++) {
+      //   const i2 = indexAttr.getX(indices[i]);
+
+      //   var positionAttribute = left.mesh!.geometry.attributes.position;
+      //   var pointA = new THREE.Vector3();
+      //   pointA.fromBufferAttribute(positionAttribute, i2);
+      //   var pointB = left.camera.position;
+
+      //   var direction = new THREE.Vector3()
+      //     .subVectors(pointB, pointA)
+      //     .normalize();
+
+      //   var ray = new THREE.Raycaster(pointA, direction);
+      //   ray.far = pointA.distanceTo(pointB);
+
+      //   var intersects2 = ray.intersectObject(left.mesh!, true);
+
+      //   if (intersects2.length === 0) {
+      //     colorAttr.setX(i2, r);
+      //     colorAttr.setY(i2, g);
+      //     colorAttr.setZ(i2, b);
+      //   }
+      // }
+
+      colorAttr.needsUpdate = true;
+    }
+  }
 }
 
 let line: any = null;
@@ -351,7 +460,6 @@ function updateRightMesh() {
   // 创建静态的顶点数据，例子中创建了一个不规则的三角形
   // 注意: 顶点是以x, y, z连续排列的
   const vertices = new Float32Array(points);
-
   // 创建顶点位置的attribute并添加到geometry中
   geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
